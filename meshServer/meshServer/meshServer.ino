@@ -1,15 +1,18 @@
 #include <Arduino.h>
+extern "C" {
+#include "user_interface.h"
+}
 
 //************************************************************
-// this is a simple example that uses the painlessMesh library to 
+// this is a simple example that uses the painlessMesh library to
 // setup a single node (this node) as a logging node
 // The logClient example shows how to configure the other nodes
 // to log to this server
 //************************************************************
 #include "painlessMesh.h"
 
-#define   MESH_PREFIX     "whateverYouLike"
-#define   MESH_PASSWORD   "somethingSneaky"
+#define   MESH_PREFIX     "natnatnat"
+#define   MESH_PASSWORD   "tantantan"
 #define   MESH_PORT       5555
 
 painlessMesh  mesh;
@@ -38,13 +41,17 @@ Task logServerTask(5000, TASK_FOREVER, []() {
 });
 
 void setup() {
-  Serial.begin(115200);
-    
-  //mesh.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE | DEBUG ); // all types on
-  //mesh.setDebugMsgTypes( ERROR | CONNECTION | SYNC | S_TIME );  // set before init() so that you can see startup messages
-  //mesh.setDebugMsgTypes( ERROR | CONNECTION | S_TIME );  // set before init() so that you can see startup messages
+  wifi_status_led_install(2,  PERIPHS_IO_MUX_GPIO2_U, FUNC_GPIO2);
 
-  mesh.init( MESH_PREFIX, MESH_PASSWORD, MESH_PORT, STA_AP, AUTH_WPA2_PSK, 6 );
+
+  Serial.begin(115200);
+  // Serial.println("HELLO");
+
+  // mesh.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE | DEBUG ); // all types on
+  //mesh.setDebugMsgTypes( ERROR | CONNECTION | SYNC | S_TIME );  // set before init() so that you can see startup messages
+  mesh.setDebugMsgTypes( ERROR | CONNECTION | S_TIME );  // set before init() so that you can see startup messages
+
+  mesh.init( MESH_PREFIX, MESH_PASSWORD, MESH_PORT, STA_AP, AUTH_WPA2_PSK, 9);
   mesh.onReceive(&receivedCallback);
 
   mesh.onNewConnection([](size_t nodeId) {

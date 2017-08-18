@@ -1,15 +1,17 @@
 #include <Arduino.h>
-
+extern "C" {
+#include "user_interface.h"
+}
 //************************************************************
-// this is a simple example that uses the painlessMesh library to 
+// this is a simple example that uses the painlessMesh library to
 // setup a node that logs to a central logging node
 // The logServer example shows how to configure the central logging nodes
 //************************************************************
 #include "painlessMesh.h"
 #include "DHT.h"
 
-#define   MESH_PREFIX     "whateverYouLike"
-#define   MESH_PASSWORD   "somethingSneaky"
+#define   MESH_PREFIX     "natnatnat"
+#define   MESH_PASSWORD   "tantantan"
 #define   MESH_PORT       5555
 
 painlessMesh  mesh;
@@ -18,13 +20,13 @@ size_t logServerId = 0;
 
 #define DHTPIN 12     // what digital pin we're connected to
 
-#define DHTTYPE DHT11   // DHT 11
+#define DHTTYPE DHT11  // DHT 11
 //#define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
 //#define DHTTYPE DHT21   // DHT 21 (AM2301)
 
 DHT dht(DHTPIN, DHTTYPE);
 
-// Send message to the logServer every 10 seconds 
+// Send message to the logServer every 10 seconds
 Task myLoggingTask(10000, TASK_FOREVER, []() {
     DynamicJsonBuffer jsonBuffer;
     JsonObject& msg = jsonBuffer.createObject();
@@ -32,8 +34,11 @@ Task myLoggingTask(10000, TASK_FOREVER, []() {
     float h = dht.readHumidity();
     // Read temperature as Celsius (the default)
     float t = dht.readTemperature();
-    msg["type"] = "weather_station";
+    msg["type"] = "sensor";
+    msg["sensor"] = "dht";
+    msg["sensor_model"] = DHTTYPE;
     msg["temp"] = String(t);
+    msg["codename"] = String("no4");
     msg["humid"] = String(h);
 
     String str;
@@ -50,11 +55,14 @@ Task myLoggingTask(10000, TASK_FOREVER, []() {
 
 void setup() {
   Serial.begin(115200);
+  // pinMode(16, OUTPUT);
+  wifi_status_led_install(2,  PERIPHS_IO_MUX_GPIO2_U, FUNC_GPIO2);
   dht.begin();
-    
+
   mesh.setDebugMsgTypes( ERROR | STARTUP | CONNECTION );  // set before init() so that you can see startup messages
 
-  mesh.init( MESH_PREFIX, MESH_PASSWORD, MESH_PORT, STA_AP, AUTH_WPA2_PSK, 6 );
+  mesh.init( MESH_PREFIX, MESH_PASSWORD, MESH_PORT, STA_AP, AUTH_WPA2_PSK, 9,
+    PHY_MODE_11G, 82, 1, 4);
   mesh.onReceive(&receivedCallback);
 
   // Add the task to the mesh scheduler
