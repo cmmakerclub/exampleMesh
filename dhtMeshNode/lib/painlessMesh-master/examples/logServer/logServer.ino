@@ -11,28 +11,21 @@
 #define   MESH_PORT       5555
 
 painlessMesh  mesh;
-bool blinkState= true;
 
 // Send my ID every 10 seconds to inform others
-Task logServerTask(5000, TASK_FOREVER, []() {
+Task logServerTask(10000, TASK_FOREVER, []() {
     DynamicJsonBuffer jsonBuffer;
     JsonObject& msg = jsonBuffer.createObject();
     msg["topic"] = "logServer";
-    if(blinkState==false){
-      msg["command"] = "off";
-    }else{
-       msg["command"] = "on";
-    }
     msg["nodeId"] = mesh.getNodeId();
-    blinkState=!blinkState;
 
     String str;
     msg.printTo(str);
     mesh.sendBroadcast(str);
 
     // log to serial
-    //msg.printTo(Serial);
-    //Serial.printf("\n");
+    msg.printTo(Serial);
+    Serial.printf("\n");
 });
 
 void setup() {
@@ -40,17 +33,17 @@ void setup() {
     
   //mesh.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE | DEBUG ); // all types on
   //mesh.setDebugMsgTypes( ERROR | CONNECTION | SYNC | S_TIME );  // set before init() so that you can see startup messages
-  //mesh.setDebugMsgTypes( ERROR | CONNECTION | S_TIME );  // set before init() so that you can see startup messages
+  mesh.setDebugMsgTypes( ERROR | CONNECTION | S_TIME );  // set before init() so that you can see startup messages
 
   mesh.init( MESH_PREFIX, MESH_PASSWORD, MESH_PORT, STA_AP, AUTH_WPA2_PSK, 6 );
   mesh.onReceive(&receivedCallback);
 
   mesh.onNewConnection([](size_t nodeId) {
-    Serial.printf("New Connection nodeID: %u\n", nodeId);
+    Serial.printf("New Connection %u\n", nodeId);
   });
 
   mesh.onDroppedConnection([](size_t nodeId) {
-    Serial.printf("Dropped Connection nodeID: %u\n", nodeId);
+    Serial.printf("Dropped Connection %u\n", nodeId);
   });
 
   // Add the task to the mesh scheduler
@@ -63,5 +56,5 @@ void loop() {
 }
 
 void receivedCallback( uint32_t from, String &msg ) {
-  Serial.printf("logServer: Received from nodeID: %u msg=%s\n", from, msg.c_str());
+  Serial.printf("logServer: Received from %u msg=%s\n", from, msg.c_str());
 }

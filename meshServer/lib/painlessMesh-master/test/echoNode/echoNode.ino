@@ -1,7 +1,7 @@
 //************************************************************
-// this is a simple example that uses the painlessMesh library to 
-// setup a node that logs to a central logging node
-// The logServer example shows how to configure the central logging nodes
+// this is a simple example that uses the painlessMesh library and echos any
+// messages it receives
+//
 //************************************************************
 #include "painlessMesh.h"
 
@@ -15,34 +15,34 @@ size_t logServerId = 0;
 
 // Send message to the logServer every 10 seconds 
 Task myLoggingTask(10000, TASK_FOREVER, []() {
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject& msg = jsonBuffer.createObject();
-    msg["topic"] = "plug";
-    msg["value"] = random(0, 180);
+    if (logServerId != 0) { 
+        DynamicJsonBuffer jsonBuffer;
+        JsonObject& msg = jsonBuffer.createObject();
+        msg["topic"] = "nodeStatus";
+        msg["nodeId"] = mesh.getNodeId();
+        msg["subs"] = mesh.subConnectionJson();
+        msg["logNode"] = logServerId;
+        msg["stability"] = mesh.stability;
+        msg["time"] = mesh.getNodeTime();
 
-    String str;
-    msg.printTo(str);
-    if (logServerId == 0) // If we don't know the logServer yet
-        mesh.sendBroadcast(str);
-    else
+        String str;
+        msg.printTo(str);
         mesh.sendSingle(logServerId, str);
 
-    // log to serial
-    msg.printTo(Serial);
-    Serial.printf("\n");
+        // log to serial
+        msg.printTo(Serial);
+        Serial.printf("\n");
+    }
 });
 
 void setup() {
-  pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH); 
   Serial.begin(115200);
     
   mesh.setDebugMsgTypes( ERROR | STARTUP | CONNECTION );  // set before init() so that you can see startup messages
 
-  mesh.init( MESH_PREFIX, MESH_PASSWORD, MESH_PORT, STA_AP, AUTH_WPA2_PSK, 6 );
+  mesh.init( MESH_PREFIX, MESH_PASSWORD, MESH_PORT );
   mesh.onReceive(&receivedCallback);
 
-  // Add the task to the mesh scheduler
   mesh.scheduler.addTask(myLoggingTask);
   myLoggingTask.enable();
 }
@@ -52,9 +52,9 @@ void loop() {
 }
 
 void receivedCallback( uint32_t from, String &msg ) {
-  Serial.printf("logClient: Received from %u msg=%s\n", from, msg.c_str());
+  Serial.printf("echoNode: Received from %u msg=%s\n", from, msg.c_str());
+  mesh.sendSingle(from, msg);
 
-  // Saving logServer
   DynamicJsonBuffer jsonBuffer;
   JsonObject& root = jsonBuffer.parseObject(msg);
   if (root.containsKey("topic")) {
@@ -64,16 +64,5 @@ void receivedCallback( uint32_t from, String &msg ) {
           Serial.printf("logServer detected!!!\n");
       }
       Serial.printf("Handled from %u msg=%s\n", from, msg.c_str());
-  }
-
-  if (root.containsKey("command")) {
-    if(logServerId==root["nodeId"]){
-      if (String("on").equals(root["command"].as<String>())) {
-        digitalWrite(LED_BUILTIN, LOW); 
-      }else{
-        digitalWrite(LED_BUILTIN, HIGH); 
-      }
-      Serial.printf("recieved command from server!!!\n");
-    }
   }
 }
