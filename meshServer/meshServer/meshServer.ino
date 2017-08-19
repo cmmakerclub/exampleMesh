@@ -22,44 +22,44 @@ bool blinkState= true;
 Task logServerTask(5000, TASK_FOREVER, []() {
     DynamicJsonBuffer jsonBuffer;
     JsonObject& msg = jsonBuffer.createObject();
-    msg["topic"] = "logServer";
-    if(blinkState==false){
-      msg["command"] = "off";
-    }else{
-       msg["command"] = "on";
-    }
-    msg["nodeId"] = mesh.getNodeId();
-    blinkState=!blinkState;
-
-    String str;
-    msg.printTo(str);
-    mesh.sendBroadcast(str);
-
-    // log to serial
-    //msg.printTo(Serial);
-    //Serial.printf("\n");
 });
 
 void setup() {
   wifi_status_led_install(2,  PERIPHS_IO_MUX_GPIO2_U, FUNC_GPIO2);
 
+  Serial.begin(57600);
+  Serial.flush();
+  Serial.println();
 
-  Serial.begin(115200);
+  uint8_t headerByte[2] = {0xff, 0xfa};
+  Serial.write(headerByte, 2);
+  Serial.write(0x01);
+  Serial.write(0x00);
+  Serial.write(0x0d);
+  Serial.write(0x0a);
   // Serial.println("HELLO");
 
   // mesh.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE | DEBUG ); // all types on
   //mesh.setDebugMsgTypes( ERROR | CONNECTION | SYNC | S_TIME );  // set before init() so that you can see startup messages
-  mesh.setDebugMsgTypes( ERROR | CONNECTION | S_TIME );  // set before init() so that you can see startup messages
+  // mesh.setDebugMsgTypes( ERROR | CONNECTION | S_TIME );  // set before init() so that you can see startup messages
 
   mesh.init( MESH_PREFIX, MESH_PASSWORD, MESH_PORT, STA_AP, AUTH_WPA2_PSK, 9);
   mesh.onReceive(&receivedCallback);
 
   mesh.onNewConnection([](size_t nodeId) {
-    Serial.printf("New Connection nodeID: %u\n", nodeId);
+    String subConnectionJson = mesh.subConnectionJson();
+    // const char* meshSu
+    Serial.write(0xff);
+    Serial.write(0xfa);
+    Serial.write(0x02);
+    Serial.write(subConnectionJson.length());
+    Serial.write(subConnectionJson.c_str(), subConnectionJson.length());
+    Serial.write(0x0d);
+    Serial.write(0x0a);
   });
 
   mesh.onDroppedConnection([](size_t nodeId) {
-    Serial.printf("Dropped Connection nodeID: %u\n", nodeId);
+    // Serial.printf("Dropped Connection nodeID: %u\n", nodeId);
   });
 
   // Add the task to the mesh scheduler
@@ -72,5 +72,12 @@ void loop() {
 }
 
 void receivedCallback( uint32_t from, String &msg ) {
-  Serial.printf("logServer: Received from nodeID: %u msg=%s\n", from, msg.c_str());
+  const char* msg_cstr = msg.c_str();
+  Serial.write(0xff);
+  Serial.write(0xfa);
+  Serial.write(0x03);
+  Serial.write(msg.length());
+  Serial.write(msg_cstr, strlen(msg_cstr));
+  Serial.write(0x0d);
+  Serial.write(0x0a);
 }
