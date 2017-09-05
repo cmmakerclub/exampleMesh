@@ -1,4 +1,6 @@
 #include <Arduino.h>
+#include <SoftwareSerial.h>
+
 extern "C" {
 #include "user_interface.h"
 }
@@ -15,6 +17,10 @@ extern "C" {
 #define   MESH_PASSWORD   "tantantan"
 #define   MESH_PORT       5555
 
+#define rxPin 14
+#define txPin 12
+SoftwareSerial swSerial(rxPin, txPin);
+
 painlessMesh  mesh;
 bool blinkState= true;
 
@@ -24,19 +30,31 @@ Task logServerTask(5000, TASK_FOREVER, []() {
     JsonObject& msg = jsonBuffer.createObject();
 });
 
+void serialWrite(uint8_t b) {
+  Serial.write(b);
+  swSerial.write(b);
+}
+
+void serialWrite(const char *b, size_t len) {
+  Serial.write(b, len);
+  swSerial.write(b, len);
+}
+
 void setup() {
   wifi_status_led_install(2,  PERIPHS_IO_MUX_GPIO2_U, FUNC_GPIO2);
-
+  pinMode(rxPin, INPUT);
+  pinMode(txPin, OUTPUT);
+  swSerial.begin(38400);
   Serial.begin(57600);
   Serial.flush();
   Serial.println();
 
-  uint8_t headerByte[2] = {0xff, 0xfa};
-  Serial.write(headerByte, 2);
-  Serial.write(0x01);
-  Serial.write(0x00);
-  Serial.write(0x0d);
-  Serial.write(0x0a);
+  serialWrite(0xff);
+  serialWrite(0xfa);
+  serialWrite(0x01);
+  serialWrite(0x00);
+  serialWrite(0x0d);
+  serialWrite(0x0a);
   // Serial.println("HELLO");
 
   // mesh.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE | DEBUG ); // all types on
@@ -49,13 +67,13 @@ void setup() {
   mesh.onNewConnection([](size_t nodeId) {
     String subConnectionJson = mesh.subConnectionJson();
     // const char* meshSu
-    Serial.write(0xff);
-    Serial.write(0xfa);
-    Serial.write(0x02);
-    Serial.write(subConnectionJson.length());
-    Serial.write(subConnectionJson.c_str(), subConnectionJson.length());
-    Serial.write(0x0d);
-    Serial.write(0x0a);
+    // serialWrite(0xff);
+    // serialWrite(0xfa);
+    // serialWrite(0x02);
+    // serialWrite(subConnectionJson.length());
+    // serialWrite(subConnectionJson.c_str(), subConnectionJson.length());
+    // serialWrite(0x0d);
+    // serialWrite(0x0a);
   });
 
   mesh.onDroppedConnection([](size_t nodeId) {
@@ -73,11 +91,11 @@ void loop() {
 
 void receivedCallback( uint32_t from, String &msg ) {
   const char* msg_cstr = msg.c_str();
-  Serial.write(0xff);
-  Serial.write(0xfa);
-  Serial.write(0x03);
-  Serial.write(msg.length());
-  Serial.write(msg_cstr, strlen(msg_cstr));
-  Serial.write(0x0d);
-  Serial.write(0x0a);
+  serialWrite(0xff);
+  serialWrite(0xfa);
+  serialWrite(0x03);
+  serialWrite(msg.length());
+  serialWrite(msg_cstr, strlen(msg_cstr));
+  serialWrite(0x0d);
+  serialWrite(0x0a);
 }

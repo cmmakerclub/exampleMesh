@@ -26,54 +26,15 @@ size_t logServerId = 0;
 //#define DHTTYPE DHT21   // DHT 21 (AM2301)
 
 DHT dht(DHTPIN, DHTTYPE);
+#include "user_tasks.hpp"
 
 // Send message to the logServer every 10 seconds
 Task myLoggingTask(10000, TASK_FOREVER, []() {
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject& root = jsonBuffer.createObject();
-    JsonObject& data = jsonBuffer.createObject();
-    JsonObject& info = jsonBuffer.createObject();
-
-    float h = dht.readHumidity();
-    // Read temperature as Celsius (the default)
-    float t = dht.readTemperature();
-
-    if (isnan(t) ||  isnan(h)) {
-        h = 0;
-        t = 0;
-    }
-    data["type"] = "sensor";
-    data["myName"] = mesh.getNodeId();
-    data["sensor"] = "dht";
-    data["sensorType"] = DHTTYPE;
-    data["temp"] = t;
-    data["humid"] = h;
-    data["heap"] = ESP.getFreeHeap();
-    data["millis"] = millis();
-    data["codeName"] = "NatMesh001";
-
-    info["clientId"] = ESP.getChipId();
-    info["client_id"] = ESP.getChipId();
-    info["nodeId"] = mesh.getNodeId();
-    info["ip"] = "mesh";
-
-    root["d"] = data;
-    root["info"] = info;
-
-    String str;
-    root.printTo(str);
-    if (logServerId == 0) // If we don't know the logServer yet
-        mesh.sendBroadcast(str);
-    else
-        mesh.sendSingle(logServerId, str);
-
-    // log to serial
-    data.printTo(Serial);
-    Serial.printf("\n");
+  userTaskReadSensor();
 });
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(38400);
   // pinMode(16, OUTPUT);
   wifi_status_led_install(2,  PERIPHS_IO_MUX_GPIO2_U, FUNC_GPIO2);
   dht.begin();
